@@ -1,6 +1,6 @@
 <?php
 	require_once "config.php";
-	
+
 	define("QUERY_RETURN_ROWS_AFFECTED"	,1);
 	define("QUERY_RETURN_DATA_ARRAY"	,2);
 	define("QUERY_RETURN_INSERT_ID"		,3);
@@ -9,6 +9,8 @@
 		includeLink();
 	} elseif (getParameter("remove") !== false) {
 		removeLink();
+	} elseif (getParameter("install") !== false) {
+		installShrtnr();
 	} else {
 		echo routeLink();
 	}
@@ -21,6 +23,7 @@
 		header("Location: $url");
 	}
 	function includeLink() {
+		if (INSERTION_PWD_REQUIRED && !checkPassword()) error("Invalid password");
 		$url = getParameter('url');
 		if ($url === false) 						error("Invalid call - missing URL parameter");
 		if (!filter_var($url, FILTER_VALIDATE_URL))	error("Invalid URL");
@@ -45,6 +48,7 @@
 		success($customURL !== false ? $customURL : intToBase($result));
 	}
 	function removeLink() {
+		if (DELETION_PWD_REQUIRED && !checkPassword()) error("Invalid password");
 		if (!CAN_DELETE)		error("Links cannot be removed");
 		$link = getParameter("link");
 		if ($link === false	)	error("Invalid call - missing shortened link to remove");
@@ -56,7 +60,26 @@
 			error("Error removing link");
 		}
 	}
-
+	function installShrtnr() {
+		$script = "
+CREATE TABLE `links` (
+  `lnkID` int(11) NOT NULL AUTO_INCREMENT,
+  `lnkURL` varchar(50000) NOT NULL,
+  `lnkTimestamp` datetime NOT NULL,
+  `lnkIP` varchar(15) NOT NULL,
+  `lnkClicks` int(11) NOT NULL,
+  `lnkCustomURL` varchar(10) DEFAULT NULL,
+  PRIMARY KEY (`lnkID`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;";
+		
+		if (dbconnection::execSQLUnprepared($script) === true) {
+			success("", false, "Database was prepared successfully! You can start using shrtnr!");
+		} else {
+			error("Error creating shrtnr tables... maybe do it by hand?");
+		}
+		exit;
+	}
+	
 	function getURL($link) {
 		$customURL = (isCustomURL($link));
 	
@@ -190,13 +213,21 @@
 		echo json_encode($output);
 		exit;
 	}
-	function success($link, $remove=false) {
+	function success($link=null, $remove=false, $customMsg=null) {
 		$output['status'] = 1;
-		if (!$remove) $output['shrtnrURL'] = $link;
-	
+		if ($link != null) 			$output['shrtnrURL'] = $link;
+		if ($customMsg !== null)	$output['message'] = $customMsg;
 		echo json_encode($output);
 		exit;
 	}
+
+	function checkPassword() {
+		$pwd = getParameter("pwd");
+		if ($pwd === false) error("Password needed to perform the action");
+		
+		$hash = md5(PWD_HASH.getParameter("url").getParameter("link").getParameter("customURL"));
+		return ($hash == $pwd);
+	}	
 	
 	class dbconnection {
 		private static $instance = null;
@@ -277,6 +308,10 @@
 				}
 			}
 			return $types;
+		}
+		public static function execSQLUnprepared($sql) {
+			$mysqli = self::getInstance();
+			return $mysqli->query($sql);
 		}
 		private static function execSQL($sql, $params, $returnMode) {
 			$mysqli = self::getInstance();

@@ -1,8 +1,8 @@
 <?php
 	//DATABASE STUFF
 	define("DB_HOST",	"localhost");
-	define("DB_USER",	"root");
-	define("DB_PWD",	"123456");
+	define("DB_USER",	"your_username");
+	define("DB_PWD",	"your_password");
 	define("DB_DB",		"shrtnr");
 	
 	//WHAT CHARS SHOULD BE AVAILABLE FOR CREATING THE URLS?
@@ -15,7 +15,7 @@
 	//JUST THE PATH AFTER YOUR DOMAIN
 	//IF IT WILL RESIDE IN "http://yourdomain.com/shrtnr/" then write "/shrtnr/"
 	//IF IT WILL RESIDE IN "http://yourdomain.com/" then write "/"
-	define("HTTPD_FILES_PATH",	"/active/shrtnr/");
+	define("HTTPD_FILES_PATH",	"/");
 	
 	//SHOULD THE SCRIPT USE "POST" FOR API CALLS (true) OR "GET" (false) IS FINE?
 	define("USE_POST", false);
@@ -23,8 +23,19 @@
 	//SHOULD PEOPLE BE ABLE TO REMOVE LINKS?
 	define("CAN_DELETE", true);
 	
-	//ALL AUTOMATICALLY CREATED LINKS BEGIN WITH THIS CHAR (USE A SPECIAL CHAR THAT DOES NOT APPEAR ON THE SYMBOLS DEFINED ABOVE)
+	//ALL AUTOMATICALLY CREATED LINKS BEGIN WITH THIS CHAR
+	//(USE A SPECIAL CHAR THAT DOES NOT APPEAR ON THE SYMBOLS DEFINED ABOVE)
 	define("LINK_PADDING", "_");
 	
 	//WHEN PEOPLE TRY TO ACCESS AN UNEXISTING LINK, WHERE SHOULD THEY BE REDIRECTO TO?
-	define("ERROR_PAGE", "http://localhost/");
+	define("ERROR_PAGE", "http://yourdomain.com/error_page");
+	
+	//SHOULD INSERTION OF NEW LINKS BE PASSWORD PROTECTED?
+	define("INSERTION_PWD_REQUIRED", false);
+	
+	//SHOULD DELETION OF LINKS BE PASSWORD PROTECTED?
+	define("DELETION_PWD_REQUIRED", false);
+	
+	//IF INSERTION/DELETION SHOULD BE PASSWORD PROTECTED,
+	//ENTER A COMPLICATED HASH HERE. OTHERWISE, WILL NOT BE USED
+	define("PWD_HASH", "89sd)S*JPD#&*Jilj#)&*JDO@#UI*");
