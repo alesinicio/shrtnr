@@ -1,10 +1,13 @@
 <?php
 	//DATABASE STUFF
 	define("DB_HOST",	"localhost");
-	define("DB_USER",	"your_username");
-	define("DB_PWD",	"your_password");
+	define("DB_USER",	"root");
+	define("DB_PWD",	"123456");
 	define("DB_DB",		"shrtnr");
 	
+	//WHAT TIMEZONE IS YOUR SERVER ON?
+	define("TIMEZONE", "America/Sao_Paulo");
+			
 	//WHAT CHARS SHOULD BE AVAILABLE FOR CREATING THE URLS?
 	define("SYMBOLS", "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	
@@ -12,10 +15,10 @@
 	define ("URL_PADDING", 6);
 	
 	//WHERE IN YOUR SERVER WILL SHRTNR BE INSTALLED?
-	//JUST THE PATH AFTER YOUR DOMAIN
+	//JUST THE PATH AFTER YOUR DOMAIN. BE SURE TO INCLUDE A TRAILING SLASH "/"
 	//IF IT WILL RESIDE IN "http://yourdomain.com/shrtnr/" then write "/shrtnr/"
 	//IF IT WILL RESIDE IN "http://yourdomain.com/" then write "/"
-	define("HTTPD_FILES_PATH",	"/");
+	define("HTTPD_FILES_PATH",	"/active/shrtnr/");
 	
 	//SHOULD THE SCRIPT USE "POST" FOR API CALLS (true) OR "GET" (false) IS FINE?
 	define("USE_POST", false);
@@ -35,6 +38,9 @@
 	
 	//SHOULD DELETION OF LINKS BE PASSWORD PROTECTED?
 	define("DELETION_PWD_REQUIRED", false);
+	
+	//SHOULD LISTING LINKS BE PASSWORD PROTECTED?
+	define("LIST_PWD_REQUIRED", true);
 	
 	//IF INSERTION/DELETION SHOULD BE PASSWORD PROTECTED,
 	//ENTER A COMPLICATED HASH HERE. OTHERWISE, WILL NOT BE USED

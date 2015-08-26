@@ -4,64 +4,74 @@
 	define("QUERY_RETURN_ROWS_AFFECTED"	,1);
 	define("QUERY_RETURN_DATA_ARRAY"	,2);
 	define("QUERY_RETURN_INSERT_ID"		,3);
+	date_default_timezone_set(TIMEZONE);
 	
-	if (getParameter("i") !== false) {
-		includeLink();
-	} elseif (getParameter("remove") !== false) {
-		removeLink();
-	} elseif (getParameter("install") !== false) {
-		installShrtnr();
+	$shrtnr = new shrtnr();
+	
+	if ($shrtnr->getParameter("include") !== false) {
+		$shrtnr->includeLink();
+	} elseif ($shrtnr->getParameter("remove") !== false) {
+		$shrtnr->removeLink();
+	} elseif ($shrtnr->getParameter("install") !== false) {
+		$shrtnr->installShrtnr();
+	} elseif ($shrtnr->getParameter("listLinks") !== false) {
+		$shrtnr->listLinks();
+	} elseif ($shrtnr->getParameter("listLinksHTML") !== false) {
+		$shrtnr->listLinksHTML();
 	} else {
-		echo routeLink();
+		$shrtnr->routeLink();
 	}
 	
-	function routeLink() {
-		$link	= parseREST();
-		if (!validateLink($link))	redirectToErrorPage();
-		$url	= getURL($link);
-		if ($url === false) 		redirectToErrorPage();
-		header("Location: $url");
-	}
-	function includeLink() {
-		if (INSERTION_PWD_REQUIRED && !checkPassword()) error("Invalid password");
-		$url = getParameter('url');
-		if ($url === false) 						error("Invalid call - missing URL parameter");
-		if (!filter_var($url, FILTER_VALIDATE_URL))	error("Invalid URL");
-		
-		$customURL	= getParameter('customURL');
-		if ($customURL && substr($customURL, 0, 1) == LINK_PADDING)
-													error("Custom links cannot begin with '".LINK_PADDING."'");
-
-		if (isCustomURLAlreadyInDB($customURL))		error("Custom URL is already being used");
-		
-		$fields		= array("lnkURL", "lnkTimestamp", "lnkIP", "lnkClicks");
-		$values		= array($url, date("YmdHis"), $_SERVER['REMOTE_ADDR'], 0);
-		
-		if ($customURL !== false) {
-			$fields[] = "lnkCustomURL";
-			$values[] = $customURL;
+	class shrtnr {
+		public function routeLink() {
+			$link	= $this->parseREST();
+			if (strlen($link) == 0) 			$this->redirectToErrorPage();
+			if (!$this->validateLink($link))	$this->redirectToErrorPage();
+			$url	= $this->getURL($link);
+			if ($url === false) 				$this->redirectToErrorPage();
+			$this->updateCounter($link);
+			header("Location: $url");
 		}
-
-		$result = insertLinkIntoDatabase($fields, $values);
-		if ($result === false) error("Error inserting link into database");
-
-		success($customURL !== false ? $customURL : intToBase($result));
-	}
-	function removeLink() {
-		if (DELETION_PWD_REQUIRED && !checkPassword()) error("Invalid password");
-		if (!CAN_DELETE)		error("Links cannot be removed");
-		$link = getParameter("link");
-		if ($link === false	)	error("Invalid call - missing shortened link to remove");
-	
-		$result = removeLinkFromDatabase($link);
-		if ($result) {
-			success(null, true);
-		} else {
-			error("Error removing link");
+		public function includeLink() {
+			if (INSERTION_PWD_REQUIRED && !$this->checkPassword()) $this->error("Invalid password");
+			$url = $this->getParameter('url');
+			if ($url === false) 						$this->error("Invalid call - missing URL parameter");
+			if (!filter_var($url, FILTER_VALIDATE_URL))	$this->error("Invalid URL");
+		
+			$customURL	= $this->getParameter('customURL');
+			if ($customURL && substr($customURL, 0, 1) == LINK_PADDING)
+				$this->error("Custom links cannot begin with '".LINK_PADDING."'");
+		
+			if ($this->isCustomURLAlreadyInDB($customURL))		$this->error("Custom URL is already being used");
+		
+			$fields		= array("lnkURL", "lnkTimestamp", "lnkIP", "lnkClicks");
+			$values		= array($url, date("YmdHis"), $_SERVER['REMOTE_ADDR'], 0);
+		
+			if ($customURL !== false) {
+				$fields[] = "lnkCustomURL";
+				$values[] = $customURL;
+			}
+		
+			$result = $this->insertLinkIntoDatabase($fields, $values);
+			if ($result === false) error("Error inserting link into database");
+		
+			$this->success($customURL !== false ? $customURL : $this->intToBase($result));
 		}
-	}
-	function installShrtnr() {
-		$script = "
+		public function removeLink() {
+			if (DELETION_PWD_REQUIRED && !$this->checkPassword()) $this->error("Invalid password");
+			if (!CAN_DELETE)		$this->error("Links cannot be removed");
+			$link = $this->getParameter("link");
+			if ($link === false	)	$this->error("Invalid call - missing shortened link to remove");
+		
+			$result = $this->removeLinkFromDatabase($link);
+			if ($result) {
+				$this->success(null, true);
+			} else {
+				$this->error("Error removing link");
+			}
+		}
+		public function installShrtnr() {
+			$script = "
 CREATE TABLE `links` (
   `lnkID` int(11) NOT NULL AUTO_INCREMENT,
   `lnkURL` varchar(50000) NOT NULL,
@@ -72,163 +82,232 @@ CREATE TABLE `links` (
   PRIMARY KEY (`lnkID`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;";
 		
-		if (dbconnection::execSQLUnprepared($script) === true) {
-			success("", false, "Database was prepared successfully! You can start using shrtnr!");
-		} else {
-			error("Error creating shrtnr tables... maybe do it by hand?");
+			if (dbconnection::execSQLUnprepared($script) === true) {
+				$this->success("", false, "Database was prepared successfully! You can start using shrtnr!");
+			} else {
+				$this->error("Error creating shrtnr tables... maybe do it by hand?");
+			}
+			exit;
 		}
-		exit;
-	}
-	
-	function getURL($link) {
-		$customURL = (isCustomURL($link));
-	
-		$query = new selectquery();
-		$query->setTable("links");
-		$query->addField("lnkURL");
-		if ($customURL) {
-			$query->addWhere("lnkCustomURL", "=", $link);
-		} else {
-			$id = baseToInt($link);
-			$query->addWhere("lnkID", "=", $id);
+		public function listLinks() {
+			$this->success(null, false, json_encode($this->listLinksRaw()));
 		}
-		$result = $query->getArrayResult(true);
-	
-		if (count($result) == 0) return false;
-		return $result[0];
-	}
-	function insertLinkIntoDatabase($fields, $values) {
-		$query = new insertquery();
-		$query->setTable("links");
-		$query->setFields($fields);
-		$query->setValues($values);
-		$result = $query->runQuery();
+		public function listLinksHTML() {
+			$data = $this->listLinksRaw();
+			$headers = array("Link", "URL", "Creation date", "Creator IP", "Clicks", "Custom URL");
+			if (file_exists("shrtnr.css")) echo "<link rel='stylesheet' type='text/css' href='shrtnr.css'>";
+			echo $this->printToTable($data, $headers);
+		}
 		
-		if ($result === false) error("Error inserting link into database");
-
-		return $result;
-	}
-	function removeLinkFromDatabase($link) {
-		$customURL = isCustomURL($link);
-	
-		$query = new deletequery();
-		$query->setTable("links");
-		if ($customURL) {
-			$query->addWhere("lnkCustomURL", "=", $link);
-		} else {
-			$id = baseToInt($link);
-			$query->addWhere("lnkID", "=", $id);
+		private function updateCounter($link) {
+			$query = new updatequery();
+			$query->setTable("links");
+			$query->addNewValueNoPrepare("lnkClicks", "lnkClicks + 1");
+			if ($this->isCustomURL($link)) {
+				$query->addWhere("lnkCustomURL", "=", $link);
+			} else {
+				$query->addWhere("lnkID", "=", $this->baseToInt($link));
+			}
+			$query->runQuery();
 		}
-		$result = $query->runQuery();
-	
-		return $result;
-	}
-	
-	function intToBase($num) {
-		$radix 	= strlen(SYMBOLS);
-		$pos	= 0;
-		$symbols= SYMBOLS;
-		$out	= "";
+		private function getURL($link) {
+			$customURL = ($this->isCustomURL($link));
 		
-		if ($num==0) {
-			$out[$pos] = $symbols[0];
-		} else {
-			while ($num > 0) {
-				$r = $num % $radix;
-				$out .= $symbols[$r];
-				$num = ($num - $r) / $radix;
-				$pos--;
+			$query = new selectquery();
+			$query->setTable("links");
+			$query->addField("lnkURL");
+			if ($customURL) {
+				$query->addWhere("lnkCustomURL", "=", $link);
+			} else {
+				$id = $this->baseToInt($link);
+				$query->addWhere("lnkID", "=", $id);
+			}
+			$result = $query->getArrayResult(true);
+		
+			if (count($result) == 0) return false;
+			return $result[0];
+		}
+		private function insertLinkIntoDatabase($fields, $values) {
+			$query = new insertquery();
+			$query->setTable("links");
+			$query->setFields($fields);
+			$query->setValues($values);
+			$result = $query->runQuery();
+		
+			if ($result === false) $this->error("Error inserting link into database");
+		
+			return $result;
+		}
+		private function removeLinkFromDatabase($link) {
+			$customURL = $this->isCustomURL($link);
+		
+			$query = new deletequery();
+			$query->setTable("links");
+			if ($customURL) {
+				$query->addWhere("lnkCustomURL", "=", $link);
+			} else {
+				$id = $this->baseToInt($link);
+				$query->addWhere("lnkID", "=", $id);
+			}
+			$result = $query->runQuery();
+		
+			return $result;
+		}
+		private function listLinksRaw() {
+			if (LIST_PWD_REQUIRED) {
+				if (!$this->checkDateOffset())	$this->error("Invalid timestamp - now it's ".date("YmdHis"));
+				if (!$this->checkPassword()) 	$this->error("Invalid password");
+			}
+		
+			$query = new selectquery();
+			$query->setTable("links");
+			$query->addOrderBy("lnkTimestamp");
+			$result = $query->getArrayResult();
+		
+			$output = array();
+			foreach($result as $row) {
+				$row['lnkID'] = $this->intToBase($row['lnkID']);
+				$output[] = $row;
+			}
+			return $output;
+		}
+		
+		private function intToBase($num) {
+			$radix 	= strlen(SYMBOLS);
+			$pos	= 0;
+			$symbols= SYMBOLS;
+			$out	= "";
+		
+			if ($num==0) {
+				$out[$pos] = $symbols[0];
+			} else {
+				while ($num > 0) {
+					$r = $num % $radix;
+					$out .= $symbols[$r];
+					$num = ($num - $r) / $radix;
+					$pos--;
+				}
+			}
+		
+			$out = str_pad($out, URL_PADDING - 1, "0", STR_PAD_LEFT);
+			$out = LINK_PADDING.$out;
+		
+			return $out;
+		}
+		private function baseToInt($base) {
+			$base = ltrim($base, LINK_PADDING);
+			$base = ltrim($base, "0");
+		
+			$radix	= strlen(SYMBOLS);
+			$arr 	= str_split($base,1);
+			$i 		= 0;
+			$out	= 0;
+		
+			foreach($arr as $char) {
+				$pos = strpos(SYMBOLS, $char);
+				$partialSum = $pos * pow($radix, $i);
+				$out += $partialSum;
+				$i++;
+			}
+		
+			return $out;
+		}
+		
+		private function parseREST() {
+			$a = str_replace(HTTPD_FILES_PATH, "", $_SERVER['REQUEST_URI']);
+			$b = explode("/", $a);
+			return $b[0];
+		}
+		private function isCustomURL($link) {
+			return substr($link, 0, 1) != LINK_PADDING;
+		}
+		private function validateLink($link) {
+			if ($this->isCustomURL($link)) return true;
+			if (strlen($link) != URL_PADDING) return false;
+		
+			$link = ltrim($link, LINK_PADDING);
+		
+			foreach(str_split($link) as $char) {
+				if (strpos(SYMBOLS, $char) === false) return false;
+			}
+			return true;
+		}
+		public function getParameter($param) {
+			if (USE_POST) {
+				if (!isset($_POST[$param])) return false;
+				return $_POST[$param];
+			} else {
+				if (!isset($_GET[$param])) return false;
+				return $_GET[$param];
 			}
 		}
+		private function isCustomURLAlreadyInDB($customURL) {
+			$query = new selectquery();
+			$query->setTable("links");
+			$query->addField("lnkID");
+			$query->addWhere("lnkCustomURL", "=", $customURL);
+			$result = $query->getArrayResult(true);
 		
-		$out = str_pad($out, URL_PADDING - 1, "0", STR_PAD_LEFT);
-		$out = LINK_PADDING.$out;
-
-		return $out;
-	}
-	function baseToInt($base) {
-		$base = ltrim($base, LINK_PADDING);
-		$base = ltrim($base, "0");
-
-		$radix	= strlen(SYMBOLS);
-		$arr 	= str_split($base,1);
-		$i 		= 0;
-		$out	= 0;
-
-		foreach($arr as $char) {
-			$pos = strpos(SYMBOLS, $char);
-			$partialSum = $pos * pow($radix, $i);
-			$out += $partialSum;
-			$i++;
+			return count($result) > 0;
+		}
+		private function checkDateOffset() {
+			$time = $this->getParameter("timestamp");
+			if ($time === false) $this->error("Invalid call - missing timestamp");
+		
+			$timestamp 		= DateTime::createFromFormat("YmdHis", $time);
+			$now 			= new DateTime();
+			$offsetMinus	= new DateTime();
+			$offsetMinus->modify("-5 minutes");
+		
+			$offsetPlus	= new DateTime();
+			$offsetPlus->modify("+5 minutes");
+		
+			return ($timestamp > $offsetMinus && $timestamp < $offsetPlus);
+		}
+		private function printToTable($arrData, $arrHeaders) {
+			$output = "<table><thead><tr>";
+			foreach($arrHeaders as $header) {
+				$output .= "<th>$header</th>";
+			}
+			$output .= "</tr></thead><tbody>";
+			foreach($arrData as $row) {
+				$output .= "<tr>";
+				foreach($row as $cell) {
+					$output .= "<td>$cell</td>";
+				}
+				$output .= "</tr>";
+			}
+			$output .= "</tbody></table>";
+			return $output;
 		}
 		
-		return $out;
-	}
-	
-	function parseREST() {
-		$a = str_replace(HTTPD_FILES_PATH, "", $_SERVER['REQUEST_URI']);
-		$b = explode("/", $a);
-		return $b[0];
-	}
-	function isCustomURL($link) {
-		return substr($link, 0, 1) != LINK_PADDING;
-	}
-	function validateLink($link) {
-		if (isCustomURL($link)) return true;
-		if (strlen($link) != URL_PADDING) return false;
-
-		$link = ltrim($link, LINK_PADDING);
-
-		foreach(str_split($link) as $char) {
-			if (strpos(SYMBOLS, $char) === false) return false;
+		private function redirectToErrorPage() {
+			header("Location: ".ERROR_PAGE);
+			exit;
 		}
-		return true;
-	}
-	function getParameter($param) {
-		if (USE_POST) {
-			if (!isset($_POST[$param])) return false;
-			return $_POST[$param];
-		} else {
-			if (!isset($_GET[$param])) return false;
-			return $_GET[$param];
+		private function error($msg) {
+			$output['status'] = 0;
+			$output['error'] = $msg;
+		
+			echo json_encode($output);
+			exit;
+		}
+		private function success($link=null, $remove=false, $customMsg=null) {
+			$output['status'] = 1;
+			if ($link != null) 			$output['shrtnrURL'] = $link;
+			if ($customMsg !== null)	$output['message'] = $customMsg;
+			echo json_encode($output);
+			exit;
+		}
+
+		private function checkPassword() {
+			$pwd = $this->getParameter("pwd");
+			if ($pwd === false) $this->error("Password needed to perform the action");
+		
+			$hash = md5(PWD_HASH.$this->getParameter("url").$this->getParameter("link").$this->getParameter("customURL").$this->getParameter("timestamp"));
+			return ($hash == $pwd);
 		}
 	}
-	function isCustomURLAlreadyInDB($customURL) {
-		$query = new selectquery();
-		$query->setTable("links");
-		$query->addField("lnkID");
-		$query->addWhere("lnkCustomURL", "=", $customURL);
-		$result = $query->getArrayResult(true);
-		
-		return count($result) > 0;
-	}
-	
-	function redirectToErrorPage() {
-		header("Location: ".ERROR_PAGE);
-	}
-	function error($msg) {
-		$output['status'] = 0;
-		$output['error'] = $msg;
-	
-		echo json_encode($output);
-		exit;
-	}
-	function success($link=null, $remove=false, $customMsg=null) {
-		$output['status'] = 1;
-		if ($link != null) 			$output['shrtnrURL'] = $link;
-		if ($customMsg !== null)	$output['message'] = $customMsg;
-		echo json_encode($output);
-		exit;
-	}
-
-	function checkPassword() {
-		$pwd = getParameter("pwd");
-		if ($pwd === false) error("Password needed to perform the action");
-		
-		$hash = md5(PWD_HASH.getParameter("url").getParameter("link").getParameter("customURL"));
-		return ($hash == $pwd);
-	}	
-	
 	class dbconnection {
 		private static $instance = null;
 		public static $lasterror = "";
@@ -705,5 +784,82 @@ CREATE TABLE `links` (
 		}
 		public static function getInstance() {
 			return new deletequery();
+		}
+	}
+	class updatequery {
+		private $table;
+		private $where = array();
+		private $values = array();
+		private $valuesNoPrepare = array();
+		private $args = array();
+		private $stmt;
+		
+		public function setTable($table) {
+			$this->table = $table;
+		}
+		public function addWhere($field, $condition, $value) {
+			$this->where[] = array("field"=>$field, "condition"=>$condition, "value"=>$value);
+		}
+		public function clearWhere() {
+			$this->where = array();
+		}
+		public function clearValues() {
+			$this->values = array();
+		}
+		public function addNewValueNoPrepare($field, $value) {
+			$this->valuesNoPrepare[] = array("field"=>$field, "value"=>$value);
+		}
+		public function addNewValue($field, $value) {
+			$this->values[] = array("field"=>$field, "value"=>$value);
+		}
+		private function getFinalFields() {
+			$output = "";
+			foreach($this->values as $value) {
+				$output .= $value['field']."=?, ";
+				$this->args[] = $value['value'];
+			}
+			foreach($this->valuesNoPrepare as $value) {
+				$output .= $value['field']."=".$value['value'].", ";
+			}
+			return substr($output,0,-2);	
+		}
+		private function getFinalWhere() {
+			$output = "WHERE ";
+			if (count($this->where) == 0) return null;
+			foreach($this->where as $clause) {
+				$output .= $clause['field'].$clause['condition']."? AND ";
+				$this->args[] = $clause['value'];
+			}
+			return substr($output,0,-5);
+		}
+		private function getFinalQuery() {
+			$this->args = array();
+			$table = $this->table;
+			$values = $this->getFinalFields();
+			$where = $this->getFinalWhere();
+			
+			return "UPDATE $table SET $values $where";
+		}
+		public function getQuery() {
+			return $this->getFinalQuery();
+		}
+		public function runQuery() {
+			$query 			= $this->getQuery();
+			return dbconnection::getResults($query, false, $this->args);
+		}
+		private function getBindTypes() {
+			$types = '';
+			foreach($this->args as $par) {
+				if(is_int($par)) {
+					$types .= 'i';
+				} elseif (is_float($par)) {
+					$types .= 'd';
+				} elseif (is_string($par)) {
+					$types .= 's';
+				} else {
+					$types .= 'b';
+				}
+			}
+			return $types;
 		}
 	}
