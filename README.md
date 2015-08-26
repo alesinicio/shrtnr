@@ -2,7 +2,7 @@
 Simple PHP URL shortener that uses two single files to achieve all functionality
 
 The shrtnr project provides a very simple way for people to build their own URL shorteners using just two files (plus a .htaccess to provide REST functionality).
-The idea is to get long and complex URLs and turn them into small addresses that can be easily distributed.
+The idea is to get long and complex URLs and turn them into small addresses that can be easily distributed. For example, you can turn `http://www.complexdomain.com/waaaaytoolongurltoremember` into something like `http://yourdomain.com/simple`.
 
 <h2>Shortened links types</h2>
 Shrtnr allows you to use automatically generated sequential URL for each link that is shortened or to create your own customized links.
