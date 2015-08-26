@@ -22,6 +22,7 @@ Shrtnr allows some configurations:
 <li>Configurable length and allowed characters for new automatically shortened links</li>
 <li>Global "toggle switch" for completely disallowing link removal</li>
 <li>Configurable "error page" if user tries to access an invalid link</li>
+</ul>
 
 <h2>Installation</h2>
 <li>Consider shrtnd should be deployed to "http://yourdomain.com".</li>
@@ -51,5 +52,11 @@ The hash is made of a salt (wich is provided in the "config.php" file) and some 
 <code>hash = md5 ( salt + url + link + customURL )</code>
 
 The parameters "url", "link" and "customURL" may be empty depending on your request type. No problem.
-With the hash in hands, just append a "pwd=hashyoucalculated" parameter in your call. For example (the hash below is valid, if you are wondering):
+With the hash in hands, just append a "pwd=hashyoucalculated" parameter in your call. For example (the hash below is valid, if you are wondering):<br>
 <code>http://yourdomain.com/?i&url=http://mycoolwebsite.com&customURL=mcweb&pwd=04043abcaa02d1e064afa288ff5356ee</code>
+
+<h2>GET or POST</h2>
+Shrtnr works with GET or POST calls for inserting and removing links, your choice. Just configure it in the "config.php" file. Of course, if you choose to use POST, there's no need to include all that ugly data in the URL, just pass the arguments over POST.
+
+<h2>Feel free to change</h2>
+If you like shrtnr but thinks it could be better, or want to change it, no problem. Fork the project, branch it away! If possible, leave a note. If it is something cool, I'd like to know and use it too!
