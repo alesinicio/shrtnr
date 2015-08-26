@@ -25,11 +25,14 @@ Shrtnr allows some configurations:
 </ul>
 
 <h2>Installation</h2>
+<ul>
 <li>Consider shrtnd should be deployed to "http://yourdomain.com".</li>
 <li>Change the "config.php" file to match your settings. All settings are explained within the file.</li>
 <li>Copy the two ".php" files to your root domain folder.</li>
 <li>Copy the .htaccess to your server according to our example, or change yours to match our example</li>
 IF YOU HAVE MORE STUFF IN THE FOLDER WHERE YOU ARE COPYING THE .htaccess FILE, BE CAREFUL!
+<li>Access "http://yourdomain.com/&install" and shrtnr will create the tables needed on the database. You should have the database already created, though.</li>
+</ul>
 
 <h2>API calls</h2>
 To include a new link with automatic shortened link generation, just use the following URL:<br>
