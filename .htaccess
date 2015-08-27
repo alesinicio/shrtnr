@@ -1,5 +1,4 @@
 <IfModule mod_rewrite.c>
-	RewriteEngine On
-	RewriteCond ^ index.php
-        RewriteRule !\.(js|gif|css|jpg|png)$ /index.php
+	RewriteEngine on
+	RewriteRule ^ index.php
 </IfModule>
