@@ -30,7 +30,7 @@
 			$url	= $this->getURL($link);
 			if ($url === false) 				$this->redirectToErrorPage();
 			$this->updateCounter($link);
-			header("Location: $url");
+			header("Location: $url", TRUE, 301);
 		}
 		public function includeLink() {
 			if (INSERTION_PWD_REQUIRED && !$this->checkPassword()) $this->error("Invalid password");
@@ -282,7 +282,7 @@ CREATE TABLE `links` (
 		}
 		
 		private function redirectToErrorPage() {
-			header("Location: ".ERROR_PAGE);
+			header("Location: ".ERROR_PAGE, TRUE, 301);
 			exit;
 		}
 		private function error($msg) {
