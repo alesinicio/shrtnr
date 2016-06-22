@@ -6,6 +6,7 @@
 	define("QUERY_RETURN_INSERT_ID"		,3);
 	date_default_timezone_set(TIMEZONE);
 	
+	
 	$shrtnr = new shrtnr();
 	
 	if ($shrtnr->getParameter("include") !== false) {
@@ -27,10 +28,14 @@
 			$link	= $this->parseREST();
 			if (strlen($link) == 0) 			$this->redirectToErrorPage();
 			if (!$this->validateLink($link))	$this->redirectToErrorPage();
-			$url	= $this->getURL($link);
-			if ($url === false) 				$this->redirectToErrorPage();
-			$this->updateCounter($link);
-			header("Location: $url", TRUE, 301);
+			$lnk	= $this->getURL($link);
+			if ($lnk === false) 				$this->redirectToErrorPage();
+			if ($lnk["lnkSingleUse"] === 1) {
+				$this->removeLink($lnk["lnkID"]);
+			} else {
+				$this->updateCounter($link);
+			}
+			header("Location: ".$lnk["lnkURL"], TRUE, (CACHE_REDIRECT ? 301 : 307));
 		}
 		public function includeLink() {
 			if (INSERTION_PWD_REQUIRED && !$this->checkPassword()) $this->error("Invalid password");
@@ -38,14 +43,15 @@
 			if ($url === false) 						$this->error("Invalid call - missing URL parameter");
 			if (!filter_var($url, FILTER_VALIDATE_URL))	$this->error("Invalid URL");
 		
+			$singleUse	= $this->getParameter('singleUse');
 			$customURL	= $this->getParameter('customURL');
 			if ($customURL && substr($customURL, 0, 1) == LINK_PADDING)
 				$this->error("Custom links cannot begin with '".LINK_PADDING."'");
 		
 			if ($this->isCustomURLAlreadyInDB($customURL))		$this->error("Custom URL is already being used");
 		
-			$fields		= array("lnkURL", "lnkTimestamp", "lnkIP", "lnkClicks");
-			$values		= array($url, date("YmdHis"), $_SERVER['REMOTE_ADDR'], 0);
+			$fields		= array("lnkURL", "lnkTimestamp", "lnkIP", "lnkClicks", "lnkSingleUse");
+			$values		= array($url, date("YmdHis"), $_SERVER['REMOTE_ADDR'], 0, $singleUse);
 		
 			if ($customURL !== false) {
 				$fields[] = "lnkCustomURL";
@@ -57,13 +63,16 @@
 		
 			$this->success($customURL !== false ? $customURL : $this->intToBase($result));
 		}
-		public function removeLink() {
-			if (DELETION_PWD_REQUIRED && !$this->checkPassword()) $this->error("Invalid password");
+		public function removeLink($lnkID=null) {
 			if (!CAN_DELETE)		$this->error("Links cannot be removed");
-			$link = $this->getParameter("link");
-			if ($link === false	)	$this->error("Invalid call - missing shortened link to remove");
+			if (DELETION_PWD_REQUIRED && !$this->checkPassword()) $this->error("Invalid password");
+			$link = ($lnkID == null ? $this->getParameter("link") : $lnkID);
+			if ($link === false)	$this->error("Invalid call - missing shortened link to remove");
 		
-			$result = $this->removeLinkFromDatabase($link);
+			$result = $this->removeLinkFromDatabase($link, $lnkID==null);
+			
+			if ($lnkID != null) return true;
+			
 			if ($result) {
 				$this->success(null, true);
 			} else {
@@ -79,6 +88,7 @@ CREATE TABLE `links` (
   `lnkIP` varchar(15) NOT NULL,
   `lnkClicks` int(11) NOT NULL,
   `lnkCustomURL` varchar(10) DEFAULT NULL,
+  `lnkSingleUse` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`lnkID`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;";
 		
@@ -115,14 +125,14 @@ CREATE TABLE `links` (
 		
 			$query = new selectquery();
 			$query->setTable("links");
-			$query->addField("lnkURL");
+			$query->addField("lnkID", "lnkURL", "lnkSingleUse");
 			if ($customURL) {
 				$query->addWhere("lnkCustomURL", "=", $link);
 			} else {
 				$id = $this->baseToInt($link);
 				$query->addWhere("lnkID", "=", $id);
 			}
-			$result = $query->getArrayResult(true);
+			$result = $query->getArrayResult();
 		
 			if (count($result) == 0) return false;
 			return $result[0];
@@ -138,15 +148,19 @@ CREATE TABLE `links` (
 		
 			return $result;
 		}
-		private function removeLinkFromDatabase($link) {
-			$customURL = $this->isCustomURL($link);
+		private function removeLinkFromDatabase($link, $chkCustomURL=true) {
+			$customURL = ($chkCustomURL ? $this->isCustomURL($link) : false);
 		
 			$query = new deletequery();
 			$query->setTable("links");
 			if ($customURL) {
 				$query->addWhere("lnkCustomURL", "=", $link);
 			} else {
-				$id = $this->baseToInt($link);
+				if (substr($link, 0 ,1) == LINK_PADDING) {
+					$id = $this->BaseToInt($link);					
+				} else {
+					$id = $link;
+				}
 				$query->addWhere("lnkID", "=", $id);
 			}
 			$result = $query->runQuery();
@@ -188,7 +202,7 @@ CREATE TABLE `links` (
 					$pos--;
 				}
 			}
-		
+
 			$out = str_pad($out, URL_PADDING - 1, "0", STR_PAD_LEFT);
 			$out = LINK_PADDING.$out;
 		

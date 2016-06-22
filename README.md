@@ -74,3 +74,11 @@ Just put a `shrtnr.css` file on the same folder and style-away!
 
 <h2>Feel free to change</h2>
 If you like shrtnr but thinks it could be better, or want to change it, no problem. Fork the project, branch it away! If possible, leave a note. If it is something cool, I'd like to know and use it too!
+
+<hr>
+<h1>LAST UPDATES</h1>
+<h3>v1.01</h3>
+<ul>
+<li>Redirect type (permanent or temporary) is now configurable;</li>
+<li>Possibility to create single-use links.</ul>
+</ul>
