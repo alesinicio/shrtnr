@@ -5,7 +5,7 @@ The shrtnr project provides a very simple way for people to build their own URL 
 The idea is to get long and complex URLs and turn them into small addresses that can be easily distributed. For example, you can turn `http://www.complexdomain.com/waaaaytoolongurltoremember` into something like `http://yourdomain.com/simple`.
 
 <h2>Shortened links types</h2>
-Shrtnr allows you to use automatically generated sequential URL for each link that is shortened or to create your own customized links.
+Shrtnr allows you to use automatically generated sequential/random URL for each link that is shortened or to create your own customized links.
 
 <h2>No interface</h2>
 Shrtnr does not have any graphical interface. It uses simples API calls to insert, remove and access links.
@@ -20,6 +20,7 @@ Shrtnr allows some configurations:
 <li>Optional password protection for removing links</li>
 <li>Shrtnr automatically forbids two equal custom URLs</li>
 <li>Configurable length and allowed characters for new automatically shortened links</li>
+<li>Links may be user-defined, sequential or completely random.</li>
 <li>Global "toggle switch" for completely disallowing link removal</li>
 <li>Configurable "error page" if user tries to access an invalid link</li>
 </ul>
