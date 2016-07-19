@@ -5,10 +5,9 @@
 	define("QUERY_RETURN_DATA_ARRAY"	,2);
 	define("QUERY_RETURN_INSERT_ID"		,3);
 	date_default_timezone_set(TIMEZONE);
-	
-	
+
 	$shrtnr = new shrtnr();
-	
+
 	if ($shrtnr->getParameter("include") !== false) {
 		$shrtnr->includeLink();
 	} elseif ($shrtnr->getParameter("remove") !== false) {
@@ -37,6 +36,10 @@
 			}
 			header("Location: ".$lnk["lnkURL"], TRUE, (CACHE_REDIRECT ? 301 : 307));
 		}
+		private function generateRandomID() {
+			$rnd = abs(rand(0, MAX_DB_ID));
+			return $rnd;
+		}
 		public function includeLink() {
 			if (INSERTION_PWD_REQUIRED && !$this->checkPassword()) $this->error("Invalid password");
 			$url = $this->getParameter('url');
@@ -48,7 +51,7 @@
 			if ($customURL && substr($customURL, 0, 1) == LINK_PADDING)
 				$this->error("Custom links cannot begin with '".LINK_PADDING."'");
 		
-			if ($this->isCustomURLAlreadyInDB($customURL))		$this->error("Custom URL is already being used");
+			if ($this->isCustomURLAlreadyInDB($customURL))		$this->error("Custom URL '$customURL' is already being used");
 		
 			$fields		= array("lnkURL", "lnkTimestamp", "lnkIP", "lnkClicks", "lnkSingleUse");
 			$values		= array($url, date("YmdHis"), $_SERVER['REMOTE_ADDR'], 0, $singleUse);
@@ -57,10 +60,17 @@
 				$fields[] = "lnkCustomURL";
 				$values[] = $customURL;
 			}
+			if (!SEQUENTIAL_LINKS) {
+				$fields[] = "lnkID";
+				$lnkID = null;
+				while ($this->isIDAlreadyInDB($lnkID)) {
+					$lnkID = $this->generateRandomID();
+				}
+				$values[] = $lnkID;
+			}
 		
 			$result = $this->insertLinkIntoDatabase($fields, $values);
 			if ($result === false) error("Error inserting link into database");
-		
 			$this->success($customURL !== false ? $customURL : $this->intToBase($result));
 		}
 		public function removeLink($lnkID=null) {
@@ -196,7 +206,7 @@ CREATE TABLE `links` (
 				$out[$pos] = $symbols[0];
 			} else {
 				while ($num > 0) {
-					$r = $num % $radix;
+					$r = bcmod($num, $radix);
 					$out .= $symbols[$r];
 					$num = ($num - $r) / $radix;
 					$pos--;
@@ -255,14 +265,22 @@ CREATE TABLE `links` (
 				return $_GET[$param];
 			}
 		}
-		private function isCustomURLAlreadyInDB($customURL) {
+		private function isAlreadyInDB($checkForCustom, $data) {
 			$query = new selectquery();
 			$query->setTable("links");
 			$query->addField("lnkID");
-			$query->addWhere("lnkCustomURL", "=", $customURL);
+			$query->addWhere($checkForCustom ? "lnkCustomURL" : "lnkID", "=", $data);
 			$result = $query->getArrayResult(true);
-		
+			
 			return count($result) > 0;
+		}
+		private function isCustomURLAlreadyInDB($customURL) {
+			if (strlen($customURL) == 0) return false;
+			return $this->isAlreadyInDB(true, $customURL);
+		}
+		private function isIDAlreadyInDB($lnkID) {
+			if ($lnkID == null) return true;
+			return $this->isAlreadyInDB(false, $lnkID);
 		}
 		private function checkDateOffset() {
 			$time = $this->getParameter("timestamp");
