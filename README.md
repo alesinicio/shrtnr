@@ -1,5 +1,5 @@
 # shrtnr
-Simple PHP URL shortener that uses two single files to achieve all functionality
+Simple PHP URL shortener that uses two single files to achieve all functionality.
 
 The shrtnr project provides a very simple way for people to build their own URL shorteners using just two files (plus a .htaccess to provide REST functionality).
 The idea is to get long and complex URLs and turn them into small addresses that can be easily distributed. For example, you can turn `http://www.complexdomain.com/waaaaytoolongurltoremember` into something like `http://yourdomain.com/simple`.
@@ -16,23 +16,23 @@ Shrtnr uses a MySQL database to store the links. You should have access to one i
 <h2>Functionalities</h2>
 Shrtnr allows some configurations:
 <ul>
-<li>Optional password protection for inserting links</li>
-<li>Optional password protection for removing links</li>
-<li>Shrtnr automatically forbids two equal custom URLs</li>
-<li>Configurable length and allowed characters for new automatically shortened links</li>
+<li>Optional password protection for inserting links.</li>
+<li>Optional password protection for removing links.</li>
+<li>Shrtnr automatically forbids two equal custom URLs.</li>
+<li>Configurable length and allowed characters for new automatically shortened links.</li>
 <li>Links may be user-defined, sequential or completely random.</li>
-<li>Global "toggle switch" for completely disallowing link removal</li>
-<li>Configurable "error page" if user tries to access an invalid link</li>
+<li>Global "toggle switch" for completely disallowing link removal.</li>
+<li>Configurable "error page" if user tries to access an invalid link.</li>
 </ul>
 
 <h2>Installation</h2>
 <ul>
-<li>Consider shrtnd should be deployed to "http://yourdomain.com".</li>
+<li>Consider shrtnr should be deployed to "http://yourdomain.com".</li>
 <li>Change the "config.php" file to match your settings. All settings are explained within the file.</li>
 <li>Copy the two ".php" files to your root domain folder.</li>
-<li>Copy the .htaccess to your server according to our example, or change yours to match our example</li>
+<li>Copy the .htaccess to your server according to our example, or change yours to match our example.</li>
 IF YOU HAVE MORE STUFF IN THE FOLDER WHERE YOU ARE COPYING THE .htaccess FILE, BE CAREFUL!
-<li>Access "http://yourdomain.com/&install" and shrtnr will create the tables needed on the database. You should have the database already created, though.</li>
+<li>Access "http://yourdomain.com?install" and shrtnr will create the tables needed on the database. You should have the database already created, though.</li>
 </ul>
 
 <h2>API calls</h2>
@@ -56,14 +56,14 @@ If an error occurs, shrtnr will output a second field "error" telling you why th
 If you insert a link successfully, shtrnr returns a field "shrtnURL" with the shortened URL (either the automatically generated URL or your custom one).
 
 <h2>Password protection</h2>
-Shrtnr allows you to protect the creation, deletion and listing of links. When this option is toggled on, a dynamic hashshould be included in every request.
+Shrtnr allows you to protect the creation, deletion and listing of links. When this option is toggled on, a dynamic hash should be included in every request.
 The hash is made of a salt (which is provided in the "config.php" file) and some information of the request itself. The calculation is made this way:<br>
 
-<code>hash = md5 ( salt + url + link + customURL + timestamp)</code>
+<code>hash = md5(salt + url + link + customURL + timestamp)</code>
 
 The parameters "url", "link", "customURL" and "timestamp" may be empty depending on your request type. No problem.
-With the hash in hands, just append a "pwd=hashyoucalculated" parameter in your call. For example (the hash below is valid, if you are wondering):<br>
-<code>http://yourdomain.com/?include&url=http://mycoolwebsite.com&customURL=mcweb&pwd=04043abcaa02d1e064afa288ff5356ee</code>
+With the hash in hands, just append a "pwd=hashyoucalculated" parameter in your call. For example (the hash below is valid for salt '123456', if you are wondering):<br>
+<code>http://yourdomain.com/?include&url=http://mycoolwebsite.com&customURL=mcweb&pwd=7a9532cff367e019fca9ef9575dd3f3f</code>
 
 Specifically on the "listLinks" and "listLinksHTML" methods, you should inform an additional `timestamp=yyyymmddhhiiss` with your current time. Shrtnr will check if your timestamp is within a 10 minute window of the server's own time to validate the request.
 
@@ -78,6 +78,10 @@ If you like shrtnr but thinks it could be better, or want to change it, no probl
 
 <hr>
 <h1>LAST UPDATES</h1>
+<h3>v1.02</h3>
+<ul>
+<li>Possibility to create random shortened links, instead of sequential ones.</ul>
+</ul>
 <h3>v1.01</h3>
 <ul>
 <li>Redirect type (permanent or temporary) is now configurable;</li>
