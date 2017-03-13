@@ -114,7 +114,7 @@ CREATE TABLE `links` (
 		}
 		public function listLinksHTML() {
 			$data = $this->listLinksRaw();
-			$headers = array("Link", "URL", "Creation date", "Creator IP", "Clicks", "Custom URL");
+			$headers = array("Link", "URL", "Creation date", "Creator IP", "Clicks", "Custom URL", "Single use");
 			if (file_exists("shrtnr.css")) echo "<link rel='stylesheet' type='text/css' href='shrtnr.css'>";
 			echo $this->printToTable($data, $headers);
 		}
