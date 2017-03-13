@@ -78,12 +78,18 @@ If you like shrtnr but thinks it could be better, or want to change it, no probl
 
 <hr>
 <h1>LAST UPDATES</h1>
+<h3>v1.02a</h3>
+<ul>
+<li>Bugfix - shrtnr.css file was not being included due to .htaccess misconfiguration;</li>
+<li>Bugfix - listing links in HTML mode generated table with missing header for "single use" option;</li>
+<li>Update - config.php has new default values and revised documentation.</li>
+</ul>
 <h3>v1.02</h3>
 <ul>
-<li>Possibility to create random shortened links, instead of sequential ones.</ul>
+<li>Possibility to create random shortened links, instead of sequential ones.</li>
 </ul>
 <h3>v1.01</h3>
 <ul>
 <li>Redirect type (permanent or temporary) is now configurable;</li>
-<li>Possibility to create single-use links.</ul>
+<li>Possibility to create single-use links.</ll>
 </ul>
