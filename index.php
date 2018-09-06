@@ -46,7 +46,7 @@
 			if ($url === false) 						$this->error("Invalid call - missing URL parameter");
 			if (!filter_var($url, FILTER_VALIDATE_URL))	$this->error("Invalid URL");
 		
-			$singleUse	= $this->getParameter('singleUse');
+			$singleUse	= $this->getParameter('singleUse') === false ? 0 : 1;
 			$customURL	= $this->getParameter('customURL');
 			if ($customURL && substr($customURL, 0, 1) == LINK_PADDING)
 				$this->error("Custom links cannot begin with '".LINK_PADDING."'");
@@ -188,7 +188,7 @@ CREATE TABLE `links` (
 			$query->addOrderBy("lnkTimestamp");
 			$result = $query->getArrayResult();
 		
-			$output = array();
+			$output = [];
 			foreach($result as $row) {
 				$row['lnkID'] = $this->intToBase($row['lnkID']);
 				$output[] = $row;
@@ -287,7 +287,6 @@ CREATE TABLE `links` (
 			if ($time === false) $this->error("Invalid call - missing timestamp");
 		
 			$timestamp 		= DateTime::createFromFormat("YmdHis", $time);
-			$now 			= new DateTime();
 			$offsetMinus	= new DateTime();
 			$offsetMinus->modify("-5 minutes");
 		
@@ -318,14 +317,16 @@ CREATE TABLE `links` (
 			exit;
 		}
 		private function error($msg) {
-			$output['status'] = 0;
-			$output['error'] = $msg;
+			$output = [
+				'status'	=> 0,
+				'error'		=> $msg
+			];
 		
 			echo json_encode($output);
 			exit;
 		}
 		private function success($link=null, $remove=false, $customMsg=null) {
-			$output['status'] = 1;
+			$output = ['status' => 1];
 			if ($link != null) 			$output['shrtnrURL'] = $link;
 			if ($customMsg !== null)	$output['message'] = $customMsg;
 			echo json_encode($output);
@@ -354,10 +355,9 @@ CREATE TABLE `links` (
 			self::$instance = new mysqli(DB_HOST, DB_USER, DB_PWD, DB_DB);
 			self::$instance->set_charset("UTF8");
 		}
-		public static function getResults($query, $forceUTF8Conversion = false, $args = array()) {
-			$output		= array();
-			$link		= self::getInstance();
-			if ($args !== array()) {
+		public static function getResults($query, $forceUTF8Conversion = false, $args = []) {
+			$output		= [];
+			if ($args !== []) {
 				$types		= self::getBindTypes($args);
 				array_unshift($args, $types);
 			}
@@ -377,7 +377,7 @@ CREATE TABLE `links` (
 			$result = self::execSQL($query, $args, $returnData);
 			if ($returnData == QUERY_RETURN_DATA_ARRAY) {
 				if (!is_array($result)) {
-					$result = array();
+					$result = [];
 				}
 				foreach($result as $row) {
 					$output[] = $row;
@@ -428,7 +428,7 @@ CREATE TABLE `links` (
 			$mysqli = self::getInstance();
 			if (!$stmt = $mysqli->prepare($sql)) return false;
 	
-			if ($params !== array()) {
+			if ($params !== []) {
 				call_user_func_array(array(
 						$stmt,
 						'bind_param'
@@ -446,6 +446,8 @@ CREATE TABLE `links` (
 				case QUERY_RETURN_DATA_ARRAY:
 					$meta = $stmt->result_metadata();
 	
+					$parameters = [];
+					$row		= [];
 					while ($field = $meta->fetch_field()) {
 						$parameters[] = &$row[$field->name];
 					}
@@ -455,9 +457,9 @@ CREATE TABLE `links` (
 							'bind_result'
 					), self::refValues($parameters));
 	
-					$results = array();
+					$results = [];
 					while ($stmt->fetch()) {
-						$x = array();
+						$x = [];
 						foreach ($row as $key=>$val) {
 							$x[$key] = $val;
 						}
@@ -467,7 +469,7 @@ CREATE TABLE `links` (
 					$result = $results;
 					break;
 				default:
-					$result = array();
+					$result = [];
 					break;
 			}
 	
@@ -486,8 +488,8 @@ CREATE TABLE `links` (
 		}
 		private static function refValues($arr) {
 			if (strnatcmp(phpversion(), '5.3') >= 0) {
-				$refs = array();
-				foreach ($arr as $key=>$value)
+				$refs = [];
+				foreach (array_keys($arr) as $key)
 					$refs[$key] = &$arr[$key];
 				return $refs;
 			}
@@ -500,13 +502,13 @@ CREATE TABLE `links` (
 		private $table;
 		private $fields;
 		private $groups;
-		private $joins = array();
+		private $joins = [];
 		private $lowerlimit = null;
 		private $limitQtd = null;
-		private $args = array();
+		private $args = [];
 		private $stmt;
-		private $formatter = array();
-		private $runFunc = array();
+		private $formatter = [];
+		private $runFunc = [];
 	
 		public function addWhere($field, $type, $condition, $level=null, $fixedValue=true) {
 			if ($level == null) {
@@ -566,7 +568,7 @@ CREATE TABLE `links` (
 			return $joinClause;
 		}
 		private function finalGroups() {
-			if (count($this->groups) == 0) return null;
+			if (!is_array($this->groups) || count($this->groups) == 0) return null;
 			$groupClause = "GROUP BY ";
 			foreach ($this->groups as $group) {
 				$groupClause .= $group.", ";
@@ -575,7 +577,7 @@ CREATE TABLE `links` (
 		}
 		private function finalWhere() {
 			$whereClause = "";
-			$this->args = array();
+			$this->args = [];
 			if (count($this->where) != 0) {
 				$whereClause = " WHERE ";
 				foreach($this->where as $level) {
@@ -596,7 +598,7 @@ CREATE TABLE `links` (
 		}
 		private function finalOrder() {
 			$orderClause = "";
-			if (count($this->orderBy) != 0) {
+			if (is_array($this->orderBy) && count($this->orderBy) != 0) {
 				$orderClause = " ORDER BY ";
 				foreach($this->orderBy as $clause) {
 					$orderClause .= "$clause[0] $clause[1],";
@@ -636,7 +638,7 @@ CREATE TABLE `links` (
 		}
 		private function getResultParamArray() {
 			$meta = $this->stmt->result_metadata();
-			$fields	= $results = array();
+			$fields	= [];
 			while ($field = $meta->fetch_field()) {
 				$var = $field->name;
 				$$var = null;
@@ -649,7 +651,7 @@ CREATE TABLE `links` (
 			return dbconnection::getResults($query, false, $this->args);
 		}
 		private function recreateSingleColumn($array) {
-			$output = array();
+			$output = [];
 			foreach($array as $row) {
 				$keys = array_keys($row);
 				$output[] = $row[$keys[0]];
@@ -657,6 +659,7 @@ CREATE TABLE `links` (
 			return $output;
 		}
 		private function getBindTypes() {
+			$par = [];
 			foreach($this->where as $level) {
 				foreach($level as $param) {
 					$par[] = $param['condition'];
@@ -665,25 +668,23 @@ CREATE TABLE `links` (
 			return dbconnection::getBindTypes($par);
 		}
 		private function formatOutput($array) {
-			$b = array();
+			$a = [];
+			$b = [];
 			foreach($array as $row) {
 				foreach($row as $key=>$val) {
-					if(isset($this->formatter[$key])) {
-						$a[$key] = stringFunctions::formatByType($val, $this->formatter[$key], $key);
-					} else {
-						$a[$key] = $val;
-					}
+					$a[$key] = $val;
 				}
 				$b[] = $a;
 			}
 			return $b;
 		}
 		private function runFunctions($array) {
-			$b = array();
+			$a = [];
+			$b = [];
 			foreach($array as $row) {
 				foreach($row as $key=>$val) {
 					if(isset($this->runFunc[$key])) {
-						$args = array();
+						$args = [];
 						$f = $this->runFunc[$key];
 						foreach($f["args"] as $arg) {
 							$args[] = ($arg === "%FIELD%" ? $val : $arg);
@@ -701,8 +702,8 @@ CREATE TABLE `links` (
 		public function getArrayResult($singleField=false) {
 			$array = $this->getObjResult();
 	
-			if ($this->runFunc!= array()) 			$array = $this->runFunctions($array);
-			if ($this->formatter!= array()) 		$array = $this->formatOutput($array);
+			if ($this->runFunc!= []) 			$array = $this->runFunctions($array);
+			if ($this->formatter!= []) 		$array = $this->formatOutput($array);
 	
 			if ($singleField) return $this->recreateSingleColumn($array);
 			return $array;
@@ -719,8 +720,8 @@ CREATE TABLE `links` (
 		}
 	}
 	class insertquery {
-		private $values = array();
-		private $fields = array();
+		private $values = [];
+		private $fields = [];
 		private $table;
 		private $fromValues = true;
 		private $stmt;
@@ -748,7 +749,7 @@ CREATE TABLE `links` (
 		private function finalValues() {
 			if (count($this->values) == 0) return;
 			$val = "(";
-			foreach ($this->values as $value) {
+			for($i=0; $i<count($this->values); $i++) {
 				$val .= "?,";
 			}
 			$val = substr($val,0,-1).")";
@@ -772,8 +773,6 @@ CREATE TABLE `links` (
 		}
 		public function runQuery($getInsertedID = true) {
 			$query = $this->finalQry();
-			$dbconnection = dbconnection::getInstance();
-	
 			return dbconnection::getResults($query, false, $this->values);
 		}
 		public function getQuery() {
@@ -784,7 +783,7 @@ CREATE TABLE `links` (
 		private $table;
 		private $where;
 		private $stmt;
-		private $args = array();
+		private $args = [];
 	
 		public function setTable($table) {
 			$this->table = $table;
@@ -810,8 +809,6 @@ CREATE TABLE `links` (
 		}
 		public function runQuery($returnAffectedRows=false) {
 			$query = $this->getQuery();
-			$dbconnection = dbconnection::getInstance();
-				
 			return dbconnection::getResults($query, false, $this->args);
 		}
 		public static function getInstance() {
@@ -820,10 +817,10 @@ CREATE TABLE `links` (
 	}
 	class updatequery {
 		private $table;
-		private $where = array();
-		private $values = array();
-		private $valuesNoPrepare = array();
-		private $args = array();
+		private $where = [];
+		private $values = [];
+		private $valuesNoPrepare = [];
+		private $args = [];
 		private $stmt;
 		
 		public function setTable($table) {
@@ -833,10 +830,10 @@ CREATE TABLE `links` (
 			$this->where[] = array("field"=>$field, "condition"=>$condition, "value"=>$value);
 		}
 		public function clearWhere() {
-			$this->where = array();
+			$this->where = [];
 		}
 		public function clearValues() {
-			$this->values = array();
+			$this->values = [];
 		}
 		public function addNewValueNoPrepare($field, $value) {
 			$this->valuesNoPrepare[] = array("field"=>$field, "value"=>$value);
@@ -865,7 +862,7 @@ CREATE TABLE `links` (
 			return substr($output,0,-5);
 		}
 		private function getFinalQuery() {
-			$this->args = array();
+			$this->args = [];
 			$table = $this->table;
 			$values = $this->getFinalFields();
 			$where = $this->getFinalWhere();
@@ -876,7 +873,7 @@ CREATE TABLE `links` (
 			return $this->getFinalQuery();
 		}
 		public function runQuery() {
-			$query 			= $this->getQuery();
+			$query = $this->getQuery();
 			return dbconnection::getResults($query, false, $this->args);
 		}
 		private function getBindTypes() {
